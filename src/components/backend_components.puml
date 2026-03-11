@@ -1,0 +1,49 @@
+@startuml backend_components
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Диаграмма компонентов (Level 3) — Контейнер «Backend API» (Алибеков А., Back-end)
+
+Container(web_app, "Веб-приложение (SPA)", "React 19, TypeScript", "Интерактивный пользовательский интерфейс в браузере")
+Container(mobile_app, "Мобильное приложение", "React Native, TypeScript", "Мобильный клиент для просмотра сводок и «радара проблем»")
+
+Container_Boundary(api_backend, "Backend API (Python 3.10 / FastAPI)") {
+    Component(api_router, "API Router", "FastAPI APIRouter, Pydantic v2", "Слой контроллеров: приём HTTP-запросов, валидация входных параметров, сериализация ответов и обработка ошибок")
+
+    Component(indicator_service, "Сервис демографических показателей", "Python, Pandas, NumPy", "Расчёт общих и специальных коэффициентов (рождаемость, смертность, СКР, естественный и миграционный прирост, возрастная структура)")
+    Component(forecast_service, "Сервис прогнозирования", "Python, Statsmodels, NumPy", "Построение кратко- и среднесрочных прогнозов: ARIMA/SARIMAX, экспоненциальное сглаживание Хольта-Уинтерса, когортно-компонентный метод (Лесли)")
+    Component(analytics_service, "Сервис пространственной аналитики и кластеризации", "Python, scikit-learn, SciPy", "Многомерное сравнение регионов, иерархическая кластеризация и K-Means, детектор аномалий («радар демографических проблем»)")
+    Component(report_service, "Сервис генерации аналитических отчётов", "Python, Jinja2, google-genai", "Формирование сводных паспортов регионов, сборка промптов с расчётными метриками и получение текстовых выводов от LLM")
+
+    Component(data_repo, "Репозиторий демографических данных", "Python, PyArrow, Pandas", "Слой доступа к данным: чтение партиционированных Parquet-файлов, предикатная фильтрация по регионам и годам, кэширование выборок в памяти")
+    Component(db_repo, "Репозиторий служебной БД", "Python, SQLAlchemy 2.0, asyncpg", "Асинхронный доступ к PostgreSQL: сохранение и чтение пользовательских сценариев, кэша прогнозов и истории отчётов")
+}
+
+ContainerDb(data_store, "Хранилище демографических данных", "Apache Parquet (PyArrow)", "Локальное колоночное хранилище предобработанных временных рядов")
+ContainerDb(db_service, "Служебная БД", "PostgreSQL 16", "Сценарии прогнозов, кэш расчётов и метаданные отчётов")
+System_Ext(gemini_api, "Google Gemini API", "Внешний LLM-сервис для генерации аналитических заключений")
+
+Rel(web_app, api_router, "Вызывает REST-эндпоинты (/api/indicators, /api/forecast, /api/clusters, /api/reports)", "HTTPS/JSON")
+Rel(mobile_app, api_router, "Запрашивает сводные индикаторы региона и сигналы «радара проблем»", "HTTPS/JSON")
+
+Rel(api_router, indicator_service, "Запрашивает расчёт динамики и коэффициентов по выбранной территории", "Вызов методов Python")
+Rel(api_router, forecast_service, "Передаёт параметры сценария и запрашивает прогнозные траектории", "Вызов методов Python")
+Rel(api_router, analytics_service, "Запрашивает кластеризацию субъектов РФ и список демографических рисков", "Вызов методов Python")
+Rel(api_router, report_service, "Инициирует формирование аналитического заключения по региону", "Вызов методов Python")
+
+Rel(forecast_service, indicator_service, "Получает базовые коэффициенты рождаемости, смертности и возрастные профили", "Вызов методов Python")
+Rel(analytics_service, indicator_service, "Получает нормированные векторы демографических индикаторов по всем регионам", "Вызов методов Python")
+Rel(report_service, indicator_service, "Собирает ключевые метрики региона для включения в аналитический отчёт", "Вызов методов Python")
+Rel(report_service, forecast_service, "Получает результаты прогноза для интерпретации трендов в отчёте", "Вызов методов Python")
+
+Rel(indicator_service, data_repo, "Запрашивает временные ряды численности, рождений, смертей и миграции", "DataFrame / PyArrow Table")
+Rel(forecast_service, data_repo, "Читает исторические ряды и половозрастные матрицы для обучения моделей", "DataFrame / PyArrow Table")
+Rel(forecast_service, db_repo, "Сохраняет и читает рассчитанные сценарии прогнозов из кэша", "SQLAlchemy ORM")
+Rel(report_service, db_repo, "Сохраняет сгенерированные текстовые отчёты и их метаданные", "SQLAlchemy ORM")
+
+Rel(data_repo, data_store, "Читает колоночные файлы с фильтрацией по коду региона и периоду", "Файловый I/O (PyArrow)")
+Rel(db_repo, db_service, "Выполняет параметризованные SQL-запросы", "SQL/TCP (порт 5432)")
+Rel(report_service, gemini_api, "Отправляет структурированный промпт с таблицей метрик и получает текст заключения", "HTTPS/JSON (REST API)")
+
+@enduml

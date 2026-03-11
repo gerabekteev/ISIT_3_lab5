@@ -1,0 +1,114 @@
+@startuml class_diagram
+title Диаграмма классов (Level 4) — Компонент «Сервис прогнозирования» (forecast_service, Алибеков А.)
+
+skinparam classAttributeIconSize 0
+skinparam monochrome false
+skinparam packageStyle rectangle
+
+package "forecast_service (Сервис прогнозирования)" {
+
+    class TimeSeriesData <<DataClass>> {
+        + region_code: str
+        + indicator: str
+        + years: list<int>
+        + values: list<float>
+        + age_sex_matrix: dict<str, list<float>>
+        --
+        + validate(): bool
+        + last_year(): int
+        + to_differenced(d: int): list<float>
+    }
+
+    class ForecastPoint <<DataClass>> {
+        + year: int
+        + point: float
+        + lower_bound: float
+        + upper_bound: float
+    }
+
+    class ForecastResult <<DataClass>> {
+        + region_code: str
+        + model_name: str
+        + scenario: str
+        + horizon: int
+        + trajectory: list<ForecastPoint>
+        + mape: float
+        --
+        + to_dict(): dict
+        + final_value(): float
+    }
+
+    interface IForecastStrategy <<Interface>> {
+        + {abstract} name(): str
+        + {abstract} fit(data: TimeSeriesData): void
+        + {abstract} predict(horizon: int, scenario: str): ForecastResult
+    }
+
+    class ArimaForecaster {
+        - p: int
+        - d: int
+        - q: int
+        - ar_coeffs: list<float>
+        - drift: float
+        - residual_std: float
+        - history: TimeSeriesData
+        --
+        + name(): str
+        + fit(data: TimeSeriesData): void
+        + predict(horizon: int, scenario: str): ForecastResult
+        - _estimate_ar_ols(diff_series: list<float]): void
+        - _confidence_interval(step: int, z: float): float
+    }
+
+    class HoltWintersForecaster {
+        - alpha: float
+        - beta: float
+        - phi: float
+        - level: float
+        - trend: float
+        - residual_std: float
+        - history: TimeSeriesData
+        --
+        + name(): str
+        + fit(data: TimeSeriesData): void
+        + predict(horizon: int, scenario: str): ForecastResult
+        - _grid_search_params(series: list<float]): void
+    }
+
+    class CohortComponentForecaster {
+        - fertility_rates: dict<str, float>
+        - survival_rates: dict<str, float>
+        - net_migration: float
+        - base_cohorts: dict<str, float>
+        - base_year: int
+        --
+        + name(): str
+        + fit(data: TimeSeriesData): void
+        + predict(horizon: int, scenario: str): ForecastResult
+        - _step_leslie_matrix(cohorts: dict, scenario_mult: float): dict
+    }
+
+    class ForecastEngine {
+        - strategy: IForecastStrategy
+        - registry: dict<str, IForecastStrategy>
+        --
+        + register_strategy(key: str, strategy: IForecastStrategy): void
+        + set_strategy(key: str): void
+        + run_forecast(data: TimeSeriesData, horizon: int, scenario: str): ForecastResult
+        + compare_all(data: TimeSeriesData, horizon: int, scenario: str): list<ForecastResult>
+        + evaluate_backtest(data: TimeSeriesData, test_size: int): dict<str, float>
+    }
+
+    IForecastStrategy <|.. ArimaForecaster : реализует
+    IForecastStrategy <|.. HoltWintersForecaster : реализует
+    IForecastStrategy <|.. CohortComponentForecaster : реализует
+
+    ForecastEngine o--> "1..*" IForecastStrategy : управляет стратегиями
+    ForecastEngine ..> TimeSeriesData : принимает на вход
+    ForecastEngine ..> ForecastResult : возвращает
+    IForecastStrategy ..> TimeSeriesData : обучается на
+    IForecastStrategy ..> ForecastResult : создаёт
+    ForecastResult *--> "1..*" ForecastPoint : содержит точки траектории
+}
+
+@enduml
