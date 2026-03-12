@@ -1,0 +1,86 @@
+@startuml frontend_classes
+title Диаграмма классов (Level 4) — Компонент «Движок расчёта цветовых шкал» (heatmap_styler, Слисаренко Д.)
+
+skinparam classAttributeIconSize 0
+skinparam monochrome false
+skinparam packageStyle rectangle
+
+package "heatmap_styler (Движок расчёта цветовых шкал)" {
+
+    class RegionMetric <<DataClass>> {
+        + regionCode: string
+        + regionName: string
+        + value: number
+        + isAnomaly: boolean
+    }
+
+    class ColorScaleConfig <<DataClass>> {
+        + classesCount: number
+        + paletteName: string
+        + invertScale: boolean
+        + highlightAnomalies: boolean
+    }
+
+    class LegendBucket <<DataClass>> {
+        + index: number
+        + minBound: number
+        + maxBound: number
+        + hexColor: string
+        + label: string
+    }
+
+    class StyledFeature <<DataClass>> {
+        + regionCode: string
+        + fillColorHex: string
+        + borderColorHex: string
+        + bucketIndex: number
+        + opacity: number
+    }
+
+    interface ClassificationStrategy <<Interface>> {
+        + {abstract} name(): string
+        + {abstract} computeBreaks(values: number[], classesCount: number): number[]
+    }
+
+    class QuantileStrategy {
+        + name(): string
+        + computeBreaks(values: number[], classesCount: number): number[]
+        - interpolateQuantile(sorted: number[], q: number): number
+    }
+
+    class EqualIntervalStrategy {
+        + name(): string
+        + computeBreaks(values: number[], classesCount: number): number[]
+    }
+
+    class NaturalBreaksStrategy {
+        - maxIterations: number
+        --
+        + name(): string
+        + computeBreaks(values: number[], classesCount: number): number[]
+        - computeVarianceMatrix(sorted: number[], k: number): number[][]
+    }
+
+    class HeatmapStylerContext {
+        - strategy: ClassificationStrategy
+        - palettes: Map<string, string[]>
+        --
+        + setStrategy(strategy: ClassificationStrategy): void
+        + registerPalette(name: string, colors: string[]): void
+        + buildLegend(metrics: RegionMetric[], config: ColorScaleConfig): LegendBucket[]
+        + styleRegions(metrics: RegionMetric[], config: ColorScaleConfig): StyledFeature[]
+        - resolveBucketIndex(value: number, breaks: number[]): number
+    }
+
+    ClassificationStrategy <|.. QuantileStrategy : реализует
+    ClassificationStrategy <|.. EqualIntervalStrategy : реализует
+    ClassificationStrategy <|.. NaturalBreaksStrategy : реализует
+
+    HeatmapStylerContext o--> "1" ClassificationStrategy : делегирует разбиение
+    HeatmapStylerContext ..> RegionMetric : принимает массив
+    HeatmapStylerContext ..> ColorScaleConfig : читает настройки
+    HeatmapStylerContext ..> LegendBucket : формирует легенду
+    HeatmapStylerContext ..> StyledFeature : возвращает стили полигонов
+}
+
+@enduml

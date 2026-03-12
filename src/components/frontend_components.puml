@@ -1,0 +1,53 @@
+@startuml frontend_components
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Диаграмма компонентов (Level 3) — Контейнер «Веб-приложение (SPA)» (Слисаренко Д., Front-end)
+
+Person(analyst, "Демограф-аналитик", "Анализирует показатели, настраивает параметры моделей, строит прогнозы и сравнивает территории")
+Person(official, "Сотрудник органа гос. управления", "Просматривает сводные дашборды, карту рисков («радар проблем») и отчёты")
+Person(researcher, "Исследователь / студент", "Изучает временные ряды, половозрастные пирамиды и выгружает материалы")
+
+Container_Boundary(web_app, "Веб-приложение (SPA) (React 19, TypeScript, Vite)") {
+    Component(app_router, "Маршрутизатор и макет (App Shell & Router)", "React Router v7, TypeScript", "Навигация по разделам, проверка ролей, единый каркас страниц и перехват неавторизованных переходов")
+
+    Component(dashboard_ui, "Модуль аналитических дашбордов", "React 19, Apache ECharts", "Отрисовка временных рядов, половозрастных пирамид и карточек ключевых индикаторов региона")
+    Component(forecast_ui, "Модуль конструктора прогнозов", "React 19, React Hook Form, Zod", "Ввод параметров сценария (горизонт, миграция, рождаемость), валидация форм и отображение веера прогнозов")
+    Component(map_ui, "Модуль интерактивной ГИС-карты", "React 19, Deck.gl, MapLibre GL", "Интерактивная хороплет-карта субъектов РФ, послойное отображение показателей и всплывающие паспорта регионов")
+    Component(report_ui, "Модуль просмотра и экспорта отчётов", "React 19, jsPDF, SheetJS", "Отображение аналитических справок с выводами LLM и клиентский экспорт таблиц и графиков в PDF/XLSX")
+
+    Component(heatmap_styler, "Движок расчёта цветовых шкал (Heatmap Styler)", "TypeScript (Pure Domain Logic)", "Классификация значений регионов по интервалам (квантили, равные интервалы, метод Дженкса) и генерация палитры")
+    Component(state_store, "Хранилище клиентского состояния", "Zustand, TanStack Query v5", "Кэширование ответов сервера, синхронизация выбранных фильтров (регион, период, показатель) между виджетами")
+    Component(auth_client, "Клиентский модуль авторизации", "oidc-client-ts, TypeScript", "Обработка OAuth2/OIDC-редиректов, хранение и автоматическое обновление JWT-токенов сессии")
+    Component(api_client, "HTTP-клиент API", "Axios, TypeScript", "Единый транспортный слой: формирование REST-запросов, подстановка заголовка Authorization и перехват ошибок")
+}
+
+Container(api_backend, "Backend API", "Python 3.10, FastAPI", "Серверное приложение расчёта демографических индикаторов, прогнозирования и генерации отчётов")
+System_Ext(esia, "ЕСИА (IAM)", "Единая система идентификации и аутентификации (SSO, OAuth 2.0 / OIDC)")
+System_Ext(gis_service, "Картографический тайл-сервис", "Внешний провайдер векторных подложек и геокодирования границ субъектов РФ")
+
+Rel(analyst, app_router, "Открывает разделы аналитики, прогнозирования и отчётов в браузере", "HTTPS")
+Rel(official, app_router, "Переходит к сводным дашбордам и карте демографических рисков", "HTTPS")
+Rel(researcher, app_router, "Просматривает публичные разделы статистики и половозрастные пирамиды", "HTTPS")
+
+Rel(app_router, auth_client, "Проверяет статус сессии и права доступа к защищённым маршрутам", "TypeScript Call")
+Rel(app_router, dashboard_ui, "Монтирует представление аналитических дашбордов", "React Props / Route")
+Rel(app_router, forecast_ui, "Монтирует представление конструктора прогнозов", "React Props / Route")
+Rel(app_router, map_ui, "Монтирует представление интерактивной карты регионов", "React Props / Route")
+Rel(app_router, report_ui, "Монтирует представление генератора и просмотра отчётов", "React Props / Route")
+
+Rel(dashboard_ui, state_store, "Подписывается на выбранные фильтры и кэшированные временные ряды", "React Hooks")
+Rel(forecast_ui, state_store, "Передаёт параметры сценария и получает рассчитанные траектории прогноза", "React Hooks")
+Rel(map_ui, state_store, "Запрашивает срез показателей по всем субъектам РФ за выбранный год", "React Hooks")
+Rel(report_ui, state_store, "Получает агрегированные таблицы и текст заключения для вёрстки отчёта", "React Hooks")
+
+Rel(map_ui, heatmap_styler, "Передаёт массив значений регионов для расчёта цветовых классов и легенды", "TypeScript Call")
+Rel(map_ui, gis_service, "Загружает векторные тайлы базовой карты и контуры границ регионов", "HTTPS (MVT / GeoJSON)")
+
+Rel(state_store, api_client, "Инициирует асинхронные запросы при промахе кэша или смене параметров", "Promise / Async")
+Rel(auth_client, esia, "Выполняет редирект авторизации и обмен кода на токены (Authorization Code + PKCE)", "HTTPS / OAuth 2.0")
+Rel(api_client, auth_client, "Запрашивает актуальный JWT Access Token перед отправкой запроса", "TypeScript Call")
+Rel(api_client, api_backend, "Вызывает REST-эндпоинты (/api/indicators, /api/forecast, /api/clusters, /api/reports)", "HTTPS/JSON (REST API)")
+
+@enduml
