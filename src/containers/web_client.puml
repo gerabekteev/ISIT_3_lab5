@@ -1,0 +1,26 @@
+@startuml web_client
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Клиентский контур системы DemoScope (Level 2 — фокус на клиентских контейнерах, Лиджиев Э.С.)
+
+Person(analyst, "Демограф-аналитик", "Основной пользователь: анализирует показатели, строит прогнозы и сравнивает территории")
+Person(official, "Сотрудник органа гос. управления", "Использует «радар проблем» и аналитические отчёты для принятия решений")
+Person(researcher, "Исследователь / студент", "Изучает демографическую динамику регионов РФ")
+
+System_Boundary(demoscope, "DemoScope — Клиентский контур") {
+    Container(web_app, "Веб-приложение (SPA)", "React 19, TypeScript, Vite, Tailwind CSS", "Интерактивные дашборды, карты регионов, графики прогнозов, конструктор отчётов")
+    Container(mobile_app, "Мобильное приложение", "React Native, TypeScript", "Оперативный просмотр ключевых метрик, «радар проблем» и готовые сводки")
+    Container(api_backend, "Backend API", "Python 3.10, FastAPI", "Единая точка входа серверной логики для всех клиентских приложений")
+}
+
+Rel(analyst, web_app, "Настраивает модели прогноза, строит пирамиды и отчёты", "HTTPS")
+Rel(official, web_app, "Просматривает сводные дашборды и карту рисков", "HTTPS")
+Rel(official, mobile_app, "Оперативно отслеживает ключевые индикаторы на смартфоне", "HTTPS")
+Rel(researcher, web_app, "Изучает временные ряды и экспортирует графики", "HTTPS")
+
+Rel(web_app, api_backend, "Вызывает REST-эндпоинты прогнозирования, кластеризации и отчётов", "HTTPS/JSON (REST API)")
+Rel(mobile_app, api_backend, "Запрашивает витрину ключевых показателей и уведомления радара", "HTTPS/JSON (REST API)")
+
+@enduml
