@@ -1,0 +1,68 @@
+@startuml deployment
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Диаграмма развертывания — контейнеры DemoScope на инфраструктуре (Level 2, Сырлыбаев Б.С.)
+
+Deployment_Node(client_pc, "Рабочая станция аналитика", "Windows / macOS") {
+    Container(web_app, "Веб-приложение (SPA)", "React 19, браузер", "Клиентский интерфейс системы")
+}
+
+Deployment_Node(mobile_dev, "Смартфон пользователя", "Android / iOS") {
+    Container(mobile_app, "Мобильное приложение", "React Native", "Оперативный доступ к дашбордам")
+}
+
+Deployment_Node(cloud, "Облачная инфраструктура (ЦОД)", "Yandex Cloud VPC") {
+
+    Deployment_Node(dmz_node, "Сервер веб-сервисов", "Ubuntu Linux VM (публичный IP)") {
+        Container(nginx, "Reverse Proxy", "Nginx", "Маршрутизация, SSL-терминация, раздача статики SPA")
+    }
+
+    Deployment_Node(app_node, "Сервер приложений", "Ubuntu Linux (Docker Host)") {
+        Deployment_Node(docker_rt, "Docker Engine", "Docker 24") {
+            Container(api_backend, "Backend API", "Python 3.10 / FastAPI", "REST API, прогнозирование, отчёты")
+        }
+    }
+
+    Deployment_Node(etl_node, "Сервер пакетной обработки", "Ubuntu Linux (Cron)") {
+        Container(data_pipeline, "Конвейер подготовки данных", "Python / Pandas / gdown", "Загрузка данных, конвертация в Parquet")
+    }
+
+    Deployment_Node(lake_node, "Сервер озера данных", "Ubuntu Linux VM (NFS-том)") {
+        ContainerDb(data_store, "Озеро данных", "Parquet / PyArrow (~6 ГБ)", "Предобработанные таблицы показателей")
+    }
+
+    Deployment_Node(db_primary, "Сервер БД (Мастер)", "Managed PostgreSQL VM") {
+        ContainerDb(db_master, "Служебная БД (Мастер)", "PostgreSQL 16", "Все операции записи (RW)")
+    }
+
+    Deployment_Node(db_standby, "Сервер БД (Реплика)", "Managed PostgreSQL VM") {
+        ContainerDb(db_replica, "Реплика БД (Standby)", "PostgreSQL 16", "Горячий резерв, чтение (RO)")
+    }
+}
+
+System_Ext(rosstat, "Росстат", "Официальная демографическая статистика")
+System_Ext(emiss, "ЕМИСС", "Государственная платформа статистических данных")
+System_Ext(gdrive, "Google Drive", "Облачное хранилище исходных наборов")
+System_Ext(gemini_api, "Google Gemini API", "LLM-сервис аналитики")
+System_Ext(esia, "ЕСИА (IAM)", "Единая система идентификации и аутентификации")
+
+Rel(web_app, nginx, "Запросы к системе", "HTTPS/TLS, порт 443")
+Rel(mobile_app, nginx, "Запросы к API", "HTTPS/TLS, порт 443")
+Rel(nginx, api_backend, "Проксирование запросов", "HTTP/JSON, порт 8000")
+
+Rel(api_backend, db_master, "Запись и чтение служебных данных", "SQL/TCP, порт 5432")
+Rel(api_backend, db_replica, "Аналитические выборки (чтение)", "SQL/TCP, порт 5432")
+Rel(db_master, db_replica, "Потоковая репликация", "WAL/TCP, порт 5432 (репликация)")
+
+Rel(api_backend, data_store, "Чтение Parquet-фрагментов", "Файловый I/O (NFS), порт 2049")
+Rel(data_pipeline, data_store, "Запись подготовленных данных", "Файловый I/O (NFS), порт 2049")
+
+Rel(data_pipeline, rosstat, "Выгрузка официальных показателей", "HTTPS/REST, порт 443")
+Rel(data_pipeline, emiss, "Выгрузка региональных статистических витрин", "HTTPS/REST, порт 443")
+Rel(data_pipeline, gdrive, "Скачивание исходных массивов (CSV)", "HTTPS (gdown), порт 443")
+Rel(api_backend, gemini_api, "Генерация аналитических заключений", "HTTPS/JSON, порт 443")
+Rel(api_backend, esia, "Проверка токенов OAuth 2.0", "HTTPS, порт 443")
+
+@enduml
