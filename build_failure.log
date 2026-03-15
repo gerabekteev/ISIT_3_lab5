@@ -1,0 +1,9 @@
+[CI] Step 1: Checkout repository code -> OK (local working tree)
+[CI] Step 2: Setup Java Environment -> openjdk version "25.0.2" 2026-01-20 LTS
+[CI] Step 3: Install Graphviz Engine -> dot - graphviz version 16.1.0 (20260904.0139)
+[CI] Step 4: Download PlantUML Jar Executable -> plantuml.jar
+[CI] Step 5: Lint: enforce methodologist rules (banned macros)
+src/components/backend_components.puml:28:Rel_D(api_router, forecast_service, "Передаёт параметры сценария и запрашивает прогнозные траектории", "Вызов методов Python")
+❌ CRITICAL FAILURE: banned macro Rel_R/Rel_L/Rel_D/Rel_U found.
+Use standard 'Rel()' macro per methodologist guidelines.
+----> Pipeline failed. Status: CRITICAL FAILURE ❌

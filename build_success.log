@@ -1,0 +1,9 @@
+[CI] Step 1: Checkout repository code -> OK (local working tree)
+[CI] Step 2: Setup Java Environment -> openjdk version "25.0.2" 2026-01-20 LTS
+[CI] Step 3: Install Graphviz Engine -> dot - graphviz version 16.1.0 (20260904.0139)
+[CI] Step 4: Download PlantUML Jar Executable -> plantuml.jar
+[CI] Step 5: Lint: enforce methodologist rules (banned macros)
+[INFO] No banned positioning macros detected.
+[CI] Step 6: Validate Syntax and Compile Diagrams to PNG
+[INFO] Checking PlantUML syntax for: src/code/class_diagram.puml src/code/frontend_classes.puml src/components/backend_components.puml src/components/frontend_components.puml src/containers/teamlead_containers.puml src/containers/web_client.puml src/context/context_l1.puml src/landscape/deployment.puml src/landscape/dynamic_process.puml src/landscape/landscape_l0.puml src/main.puml 
+Job completed with exit code 0. Status: SUCCESS ✅
