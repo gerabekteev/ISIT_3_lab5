@@ -28,7 +28,7 @@ Rel(web_app, api_router, "Вызывает REST-эндпоинты (/api/indicat
 Rel(mobile_app, api_router, "Запрашивает сводные индикаторы региона и сигналы «радара проблем»", "HTTPS/JSON")
 
 Rel(api_router, indicator_service, "Запрашивает расчёт динамики и коэффициентов по выбранной территории", "Вызов методов Python")
-Rel_D(api_router, forecast_service, "Передаёт параметры сценария и запрашивает прогнозные траектории", "Вызов методов Python")
+Rel(api_router, forecast_service, "Передаёт параметры сценария и запрашивает прогнозные траектории", "Вызов методов Python")
 Rel(api_router, analytics_service, "Запрашивает кластеризацию субъектов РФ и список демографических рисков", "Вызов методов Python")
 Rel(api_router, report_service, "Инициирует формирование аналитического заключения по региону", "Вызов методов Python")
 
